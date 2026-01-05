@@ -1,0 +1,1 @@
+void PWMn_init(unsigned int high);
