@@ -114,6 +114,16 @@ unsigned int xdata old_pldata2=0;
 unsigned char xdata overflow_count22=0;
 
 
+// ... 原有变量定义 ...
+unsigned long xdata wddataall;
+
+// [新增] 定义远程控制模式，默认为0（自动）
+unsigned char remote_ctrl_mode = 0; 
+
+extern unsigned char xdata ppvv;
+// ...
+
+
 
 void wsdup(void)
 {		   
@@ -326,20 +336,32 @@ thfatctrl2=0;
 	
 
 	
-		#if(tde==0)	   
-		if((thhotctrl1==1)||(thsdctrl1==1))
-		{
-			
-				ctrl_Hot1=1;	
-				led_Hot1=1;
-		}
-		else
-		{	
-		
-				ctrl_Hot1=0;
-				led_Hot1=0;							
-		
-		}
+		#if(tde==0)
+        
+        // [新增/修改] 远程控制逻辑介入
+        if(remote_ctrl_mode == 1) // 远程强制开启
+        {
+            ctrl_Hot1 = 1;
+            led_Hot1 = 1;
+        }
+        else if(remote_ctrl_mode == 2) // 远程强制关闭
+        {
+            ctrl_Hot1 = 0;
+            led_Hot1 = 0;
+        }
+        else // remote_ctrl_mode == 0 (自动模式，执行原有逻辑)
+        {
+            if((thhotctrl1==1)||(thsdctrl1==1))
+            {
+                    ctrl_Hot1=1;	
+                    led_Hot1=1;
+            }
+            else
+            {	
+                    ctrl_Hot1=0;
+                    led_Hot1=0;							
+            }
+        }
 
 			if((thhotctrl2==1)||(thsdctrl2==1))
 			{				

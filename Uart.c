@@ -2,6 +2,7 @@
  #include "stc15f2k60s2.h"
  #include "init.h"
  #include "eep.h"
+ #include "Ws.h"
 
 unsigned char xdata rec[20];		//接收缓存
 unsigned char xdata recs=0;			//接收字数
@@ -242,6 +243,23 @@ RS485=0;
 	sends=7;
 }
 
+// [新增] 发送写操作响应 (回显接收到的帧)
+void send_write_echo(void)
+{
+    unsigned char i;
+    RS485 = 0; // 切换为发送模式
+    for(i = 0; i < 8; i++)
+    {
+        send[i] = rec[i]; // 将接收缓存的数据复制到发送缓存
+    }
+    SBUF = send[0];
+    sendnum = 1;
+    sends = 8; // 响应长度为8字节
+}
+
+
+
+
 void Uart_Isr() interrupt 4 using 1
 {
 	unsigned char tempi;
@@ -275,8 +293,30 @@ void Uart_Isr() interrupt 4 using 1
 							}
 						}
 					}				
+              else if(rec[1] == 0x06) 
+                    {
+                        if(recs >= 8) // 接收完8字节 (Addr, Fun, RegH, RegL, ValH, ValL, CRCL, CRCH)
+                        {
+                            recs = 0;
+                            if(CRC16(rec, 6)) // 校验 CRC
+                            {
+                                // 判断寄存器地址，这里设定为 0x0010
+                                if(rec[2] == 0x00 && rec[3] == 0x10)
+                                {
+                                    // 根据写入的值设置模式
+                                    if(rec[5] == 0x01)      remote_ctrl_mode = 1; // 写入 1: 强制开
+                                    else if(rec[5] == 0x02) remote_ctrl_mode = 2; // 写入 2: 强制关
+                                    else                    remote_ctrl_mode = 0; // 写入 其他: 自动
+                                    
+                                    send_write_echo(); // 发送响应
+                                }
+                            }
+                        }
+                    }
                     else
-                        recs = 0;
+                    {
+                        recs = 0; // 不支持的功能码，复位接收
+                    }
                 }
                 
 			}
@@ -301,3 +341,5 @@ void Uart_Isr() interrupt 4 using 1
 			}
 		}
 }
+
+
